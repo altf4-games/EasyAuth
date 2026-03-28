@@ -1,5 +1,5 @@
 {
-  "name": "easy-auth-react",
+  "name": "@altf4-auth/react",
   "version": "1.0.0",
   "description": "React/Next.js UI component for easy-auth email OTP authentication",
   "main": "./dist/index.js",

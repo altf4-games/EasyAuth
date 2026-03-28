@@ -1,5 +1,5 @@
 {
-  "name": "easy-auth-sqlite",
+  "name": "@altf4-auth/sqlite",
   "version": "1.0.0",
   "description": "SQLite storage adapter for easy-auth",
   "main": "./dist/index.js",
@@ -29,6 +29,6 @@
     "vitest": "^4.1.2"
   },
   "peerDependencies": {
-    "easy-auth": "workspace:*"
+    "@altf4-auth/core": "workspace:*"
   }
 }

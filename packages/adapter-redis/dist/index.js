@@ -34,7 +34,7 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 var import_ioredis = __toESM(require("ioredis"));
-var NS = "easy-auth";
+var NS = "@altf4-auth/core";
 function key(segment, email) {
   return `${NS}:${segment}:${email}`;
 }

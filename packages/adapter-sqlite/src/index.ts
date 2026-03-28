@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import type { StorageAdapter, User } from "easy-auth";
+import type { StorageAdapter, User } from "@altf4-auth/core";
 
 /** Extended adapter with lifecycle methods for resource cleanup */
 export interface SQLiteAdapter extends StorageAdapter {

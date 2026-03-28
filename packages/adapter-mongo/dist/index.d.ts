@@ -1,4 +1,4 @@
-import { StorageAdapter } from 'easy-auth';
+import { StorageAdapter } from '@altf4-auth/core';
 
 interface MongoAdapterOptions {
     uri: string;

@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { StorageAdapter } from 'easy-auth';
+import { StorageAdapter } from '@altf4-auth/core';
 
 interface RedisAdapterOptions {
     /** Redis connection URL, e.g. "redis://localhost:6379" */

@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createAuth, AuthError } from "easy-auth";
-import { sqliteAdapter } from "easy-auth-sqlite";
+import { createAuth, AuthError } from "@altf4-auth/core";
+import { sqliteAdapter } from "@altf4-auth/sqlite";
 
 dotenv.config();
 

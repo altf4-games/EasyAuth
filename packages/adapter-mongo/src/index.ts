@@ -1,5 +1,5 @@
 import { MongoClient, type Db, type Collection } from "mongodb";
-import type { StorageAdapter, User } from "easy-auth";
+import type { StorageAdapter, User } from "@altf4-auth/core";
 
 interface MongoAdapterOptions {
   uri: string;

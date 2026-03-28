@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthModal } from "easy-auth-react";
+import { AuthModal } from "@altf4-auth/react";
 import { useRouter } from "next/navigation";
 
 // Since it's an interactive login, we can store auth in cookies to please middleware

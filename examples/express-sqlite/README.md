@@ -1,6 +1,6 @@
 # Express + SQLite EasyAuth Example
 
-This is a minimal example showing how to integrate `easy-auth` with Express and the SQLite storage adapter.
+This is a minimal example showing how to integrate `@altf4-auth/core` with Express and the SQLite storage adapter.
 
 ## Getting Started
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1774684675326" clover="3.2.0">
-  <project timestamp="1774684675326" name="All files">
+<coverage generated="1774693887475" clover="3.2.0">
+  <project timestamp="1774693887475" name="All files">
     <metrics statements="63" coveredstatements="63" conditionals="20" coveredconditionals="16" methods="19" coveredmethods="19" elements="102" coveredelements="98" complexity="0" loc="63" ncloc="63" packages="1" files="1" classes="1"/>
     <file name="index.ts" path="C:\Users\prady\Documents\GitHub\EasyAuth\packages\adapter-mongo\src\index.ts">
       <metrics statements="63" coveredstatements="63" conditionals="20" coveredconditionals="16" methods="19" coveredmethods="19"/>

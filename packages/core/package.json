@@ -1,5 +1,5 @@
 {
-  "name": "easy-auth",
+  "name": "@altf4-auth/core",
   "version": "1.0.0",
   "description": "Email OTP-based authentication with optional TOTP 2FA",
   "main": "./dist/index.js",

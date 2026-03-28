@@ -22,8 +22,8 @@ npm install easy-auth easy-auth-sqlite
 
 ```ts
 // lib/auth.ts — create once, import everywhere
-import { createAuth } from "easy-auth";
-import { sqliteAdapter } from "easy-auth-sqlite";
+import { createAuth } from "@altf4-auth/core";
+import { sqliteAdapter } from "@altf4-auth/sqlite";
 
 export const auth = createAuth({
   smtp: {
@@ -44,7 +44,7 @@ export const auth = createAuth({
 // Express route handlers
 import express from "express";
 import { auth } from "./lib/auth.js";
-import { AuthError } from "easy-auth";
+import { AuthError } from "@altf4-auth/core";
 
 const app = express();
 app.use(express.json());
@@ -99,9 +99,9 @@ That's it. Copy-paste ready. No extra config needed to get started.
 
 | Package | Best for | Setup |
 |---|---|---|
-| `easy-auth-sqlite` | Dev, small apps, single-process | `sqliteAdapter("./auth.db")` |
-| `easy-auth-redis` | Multi-process / multi-server | `redisAdapter({ url: "redis://localhost:6379" })` |
-| `easy-auth-mongo` | Teams already using MongoDB | `mongoAdapter({ uri: "...", dbName: "easy-auth" })` |
+| `@altf4-auth/sqlite` | Dev, small apps, single-process | `sqliteAdapter("./auth.db")` |
+| `@altf4-auth/redis` | Multi-process / multi-server | `redisAdapter({ url: "redis://localhost:6379" })` |
+| `@altf4-auth/mongo` | Teams already using MongoDB | `mongoAdapter({ uri: "...", dbName: "@altf4-auth/core" })` |
 
 If you pass no `store`, an in-memory adapter is used automatically. **It logs a warning on startup and loses all state on restart. Do not use it in production.**
 

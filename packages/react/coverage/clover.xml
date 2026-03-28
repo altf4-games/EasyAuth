@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1774685340498" clover="3.2.0">
-  <project timestamp="1774685340498" name="All files">
+<coverage generated="1774693884351" clover="3.2.0">
+  <project timestamp="1774693884351" name="All files">
     <metrics statements="118" coveredstatements="108" conditionals="90" coveredconditionals="68" methods="23" coveredmethods="23" elements="231" coveredelements="199" complexity="0" loc="118" ncloc="118" packages="1" files="2" classes="2"/>
     <file name="AuthModal.tsx" path="C:\Users\prady\Documents\GitHub\EasyAuth\packages\react\src\AuthModal.tsx">
       <metrics statements="115" coveredstatements="105" conditionals="88" coveredconditionals="66" methods="22" coveredmethods="22"/>

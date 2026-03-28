@@ -1,6 +1,6 @@
 # Next.js EasyAuth Frontend Example
 
-Demonstrates a fully functional Next.js 14 App Router **frontend-only** integration using `easy-auth-react`.
+Demonstrates a fully functional Next.js 14 App Router **frontend-only** integration using `@altf4-auth/react`.
 
 ## Important Prerequisites
 

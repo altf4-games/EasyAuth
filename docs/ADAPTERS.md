@@ -6,7 +6,7 @@ easy-auth ships with three storage adapters. Choose the one that fits your infra
 
 ---
 
-### SQLite (`easy-auth-sqlite`)
+### SQLite (`@altf4-auth/sqlite`)
 
 Best for: single-process apps, development, small-scale deployments.
 
@@ -15,7 +15,7 @@ npm install easy-auth-sqlite
 ```
 
 ```ts
-import { sqliteAdapter } from "easy-auth-sqlite";
+import { sqliteAdapter } from "@altf4-auth/sqlite";
 const store = sqliteAdapter("./auth.db");
 ```
 
@@ -24,7 +24,7 @@ WAL mode is enabled by default for better concurrent read performance.
 
 ---
 
-### Redis (`easy-auth-redis`)
+### Redis (`@altf4-auth/redis`)
 
 Best for: multi-process / multi-server deployments.
 
@@ -33,7 +33,7 @@ npm install easy-auth-redis
 ```
 
 ```ts
-import { redisAdapter } from "easy-auth-redis";
+import { redisAdapter } from "@altf4-auth/redis";
 const store = redisAdapter({ url: "redis://localhost:6379" });
 // Or pass an existing ioredis client:
 const store2 = redisAdapter({ client: existingRedisClient });
@@ -44,7 +44,7 @@ under `easy-auth:*`.
 
 ---
 
-### MongoDB (`easy-auth-mongo`)
+### MongoDB (`@altf4-auth/mongo`)
 
 Best for: teams already running MongoDB.
 
@@ -53,10 +53,10 @@ npm install easy-auth-mongo
 ```
 
 ```ts
-import { mongoAdapter } from "easy-auth-mongo";
+import { mongoAdapter } from "@altf4-auth/mongo";
 const store = mongoAdapter({
   uri: "mongodb://localhost:27017",
-  dbName: "easy-auth",
+  dbName: "@altf4-auth/core",
 });
 ```
 
@@ -67,10 +67,10 @@ connect, idempotently. OTP TTL is handled via a MongoDB TTL index on `expiresAt`
 
 ### Custom adapters
 
-Implement the `StorageAdapter` interface from `easy-auth`:
+Implement the `StorageAdapter` interface from `@altf4-auth/core`:
 
 ```ts
-import type { StorageAdapter } from "easy-auth";
+import type { StorageAdapter } from "@altf4-auth/core";
 
 class MyCustomAdapter implements StorageAdapter {
   // ... implement all methods

@@ -1,4 +1,4 @@
-import { StorageAdapter } from 'easy-auth';
+import { StorageAdapter } from '@altf4-auth/core';
 
 /** Extended adapter with lifecycle methods for resource cleanup */
 interface SQLiteAdapter extends StorageAdapter {

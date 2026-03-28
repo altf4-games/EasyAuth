@@ -1,6 +1,6 @@
 // src/index.ts
 import Redis from "ioredis";
-var NS = "easy-auth";
+var NS = "@altf4-auth/core";
 function key(segment, email) {
   return `${NS}:${segment}:${email}`;
 }

@@ -1,8 +1,8 @@
 import Redis from "ioredis";
-import type { StorageAdapter, User } from "easy-auth";
+import type { StorageAdapter, User } from "@altf4-auth/core";
 
 /** All keys are namespaced to avoid collision with application keys */
-const NS = "easy-auth";
+const NS = "@altf4-auth/core";
 
 function key(segment: string, email: string): string {
   return `${NS}:${segment}:${email}`;

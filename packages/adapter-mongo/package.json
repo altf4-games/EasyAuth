@@ -1,5 +1,5 @@
 {
-  "name": "easy-auth-mongo",
+  "name": "@altf4-auth/mongo",
   "version": "1.0.0",
   "description": "MongoDB storage adapter for easy-auth",
   "main": "./dist/index.js",
@@ -29,6 +29,6 @@
     "vitest": "^4.1.2"
   },
   "peerDependencies": {
-    "easy-auth": "workspace:*"
+    "@altf4-auth/core": "workspace:*"
   }
 }
