@@ -1,15 +1,20 @@
-# Next.js EasyAuth Example
+# Next.js EasyAuth Frontend Example
 
-Demonstrates a fully functional Next.js 14 App Router integration using `easy-auth`, `easy-auth-sqlite`, and `easy-auth-react`.
+Demonstrates a fully functional Next.js 14 App Router **frontend-only** integration using `easy-auth-react`.
+
+## Important Prerequisites
+
+This Next.js example is designed to act purely as the frontend interface for the `express-sqlite` backend API. You **must** have the `express-sqlite` example running locally on port `3000` for this to work!
+
+There is **no `.env` file required** for this Next.js project because it delegates all secure token validation, SMTP dispatching, and database management identically to the Express backend.
 
 ## Quick Start
 
-1. `cp .env.example .env`
-2. `pnpm install`
-3. `pnpm dev`
+1. Start the Express backend: `cd ../express-sqlite && pnpm dev`
+2. Start this Next.js frontend: `pnpm install && pnpm dev`
 
 ## Features
 
-- Using the `<AuthModal />` React Component on the Home Route.
-- Setting cookies via internal `/api/auth/session` API routes to support strict SSR hydration safely.
-- Middleware protection of the `/dashboard` route validating the token implicitly, which the Page then decodes directly using `auth.verifyToken`.
+- Uses the `<AuthModal />` React Component bridging perfectly via REST to the Express API.
+- Stores the authenticated session securely inside HTTP-only cookies via Server Actions.
+- Validates the `/dashboard` route continuously by polling `GET http://localhost:3000/api/user` with a Bearer Token from within a Server Component gracefully.

@@ -1,5 +1,8 @@
 @import "tailwindcss";
-
+@source "../../../../packages/react/src"; /* Relative to CSS file */
+@source "../../../../packages/react/dist"; /* Emitted JS files */
+@source "../../packages/react/src";       /* Relative to PostCSS root */
+@source "../../node_modules/easy-auth-react"; /* Dependency path */
 :root {
   --background: #ffffff;
   --foreground: #171717;
