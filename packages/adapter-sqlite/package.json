@@ -1,0 +1,34 @@
+{
+  "name": "easy-auth-sqlite",
+  "version": "1.0.0",
+  "description": "SQLite storage adapter for easy-auth",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "tsup": "^8.5.1",
+    "vitest": "^4.1.2"
+  },
+  "peerDependencies": {
+    "easy-auth": "workspace:*"
+  }
+}
