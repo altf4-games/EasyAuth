@@ -22,6 +22,24 @@ export class MemoryAdapter implements StorageAdapter {
   private otps = new Map<string, OTPRecord>();
   private lockouts = new Map<string, number>();
   private totp = new Map<string, TOTPRecord>();
+  private oauth = new Map<string, string>(); // provider:providerAccountId -> email
+
+  async getUserByOAuth(
+    provider: string,
+    providerAccountId: string,
+  ): Promise<User | null> {
+    const email = this.oauth.get(`${provider}:${providerAccountId}`);
+    if (!email) return null;
+    return this.users.get(email) ?? null;
+  }
+
+  async linkOAuthAccount(
+    email: string,
+    provider: string,
+    providerAccountId: string,
+  ): Promise<void> {
+    this.oauth.set(`${provider}:${providerAccountId}`, email);
+  }
 
   async getUser(email: string): Promise<User | null> {
     return this.users.get(email) ?? null;
@@ -29,7 +47,7 @@ export class MemoryAdapter implements StorageAdapter {
 
   async upsertUser(
     email: string,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
   ): Promise<User> {
     const existing = this.users.get(email);
     const now = Date.now();
@@ -52,7 +70,7 @@ export class MemoryAdapter implements StorageAdapter {
   async setOTP(
     email: string,
     hashedCode: string,
-    ttlSeconds: number
+    ttlSeconds: number,
   ): Promise<void> {
     this.otps.set(email, {
       hashedCode,
@@ -62,7 +80,7 @@ export class MemoryAdapter implements StorageAdapter {
   }
 
   async getOTP(
-    email: string
+    email: string,
   ): Promise<{ hashedCode: string; attempts: number } | null> {
     const record = this.otps.get(email);
     if (!record) return null;
@@ -144,10 +162,7 @@ export class MemoryAdapter implements StorageAdapter {
     }
   }
 
-  async consumeBackupCode(
-    email: string,
-    hashedCode: string
-  ): Promise<boolean> {
+  async consumeBackupCode(email: string, hashedCode: string): Promise<boolean> {
     const record = this.totp.get(email);
     if (!record) return false;
     const index = record.backupCodes.indexOf(hashedCode);

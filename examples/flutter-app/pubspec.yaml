@@ -38,6 +38,7 @@ dependencies:
   http: ^1.6.0
   easy_auth_flutter:
     path: ../../packages/easy_auth_flutter
+  app_links: ^7.0.0
 
 dev_dependencies:
   flutter_test:

@@ -7,6 +7,14 @@ function key(segment, email) {
 function redisAdapter(options) {
   const redis = options.client ?? new Redis(options.url ?? "redis://localhost:6379");
   return {
+    async getUserByOAuth(provider, providerAccountId) {
+      const email = await redis.get(key(`oauth:${provider}`, providerAccountId));
+      if (!email) return null;
+      return this.getUser(email);
+    },
+    async linkOAuthAccount(email, provider, providerAccountId) {
+      await redis.set(key(`oauth:${provider}`, providerAccountId), email);
+    },
     async getUser(email) {
       const raw = await redis.get(key("user", email));
       if (!raw) return null;

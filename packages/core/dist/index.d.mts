@@ -14,6 +14,8 @@ interface User {
 interface StorageAdapter {
     getUser(email: string): Promise<User | null>;
     upsertUser(email: string, metadata?: Record<string, unknown>): Promise<User>;
+    getUserByOAuth(provider: string, providerAccountId: string): Promise<User | null>;
+    linkOAuthAccount(email: string, provider: string, providerAccountId: string): Promise<void>;
     setOTP(email: string, hashedCode: string, ttlSeconds: number): Promise<void>;
     getOTP(email: string): Promise<{
         hashedCode: string;
@@ -55,6 +57,13 @@ interface AuthConfig {
         lockoutSeconds?: number;
     };
     store?: StorageAdapter;
+    oauth?: {
+        google?: {
+            clientId: string;
+            clientSecret: string;
+            redirectUri: string;
+        };
+    };
     email?: {
         subject?: string;
         templateFn?: (code: string) => {
@@ -63,7 +72,7 @@ interface AuthConfig {
         };
     };
 }
-type AuthErrorCode = "INVALID_EMAIL" | "OTP_EXPIRED" | "OTP_INVALID" | "OTP_MAX_ATTEMPTS" | "ACCOUNT_LOCKED" | "TOKEN_INVALID" | "TOKEN_EXPIRED" | "2FA_NOT_ENROLLED" | "2FA_INVALID" | "2FA_ALREADY_ENROLLED" | "CONFIG_INVALID";
+type AuthErrorCode = "INVALID_EMAIL" | "OTP_EXPIRED" | "OTP_INVALID" | "OTP_MAX_ATTEMPTS" | "ACCOUNT_LOCKED" | "TOKEN_INVALID" | "TOKEN_EXPIRED" | "2FA_NOT_ENROLLED" | "2FA_INVALID" | "2FA_ALREADY_ENROLLED" | "CONFIG_INVALID" | "OAUTH_FAILED";
 
 /**
  * Minimal structured logger interface. Library code emits nothing by default.
@@ -127,6 +136,17 @@ interface AuthInstance {
      */
     verify2FA(email: string, totpCode: string): Promise<void>;
     /**
+     * Generates the Google OAuth authorization URL to redirect the user to.
+     * @param state - Optional state to pass along to Google.
+     */
+    getGoogleAuthUrl(state?: string): string;
+    /**
+     * Completes the Google OAuth flow by exchanging the authorization code for tokens.
+     * @param code - The authorization code returned from Google.
+     * @throws {AuthError} OAUTH_FAILED | ACCOUNT_LOCKED
+     */
+    verifyGoogleCallback(code: string): Promise<VerifyOTPResult>;
+    /**
      * Revokes all sessions for a user by bumping their session generation counter.
      * Any previously issued tokens will fail verifyToken after this call.
      * @param email - The user whose sessions to revoke.
@@ -162,6 +182,9 @@ declare class MemoryAdapter implements StorageAdapter {
     private otps;
     private lockouts;
     private totp;
+    private oauth;
+    getUserByOAuth(provider: string, providerAccountId: string): Promise<User | null>;
+    linkOAuthAccount(email: string, provider: string, providerAccountId: string): Promise<void>;
     getUser(email: string): Promise<User | null>;
     upsertUser(email: string, metadata?: Record<string, unknown>): Promise<User>;
     setOTP(email: string, hashedCode: string, ttlSeconds: number): Promise<void>;

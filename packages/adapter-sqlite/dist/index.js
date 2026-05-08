@@ -71,6 +71,14 @@ CREATE TABLE IF NOT EXISTS backup_codes (
 CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS oauth_accounts (
+  provider            TEXT NOT NULL,
+  provider_account_id TEXT NOT NULL,
+  email               TEXT NOT NULL,
+  PRIMARY KEY (provider, provider_account_id),
+  FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+);
 `;
 function runMigrations(db) {
   db.exec(SCHEMA_SQL);
@@ -87,6 +95,14 @@ function sqliteAdapter(dbPath) {
   db.pragma("foreign_keys = ON");
   runMigrations(db);
   return {
+    async getUserByOAuth(provider, providerAccountId) {
+      const row = db.prepare("SELECT email FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?").get(provider, providerAccountId);
+      if (!row) return null;
+      return this.getUser(row.email);
+    },
+    async linkOAuthAccount(email, provider, providerAccountId) {
+      db.prepare("INSERT INTO oauth_accounts (provider, provider_account_id, email) VALUES (?, ?, ?) ON CONFLICT DO NOTHING").run(provider, providerAccountId, email);
+    },
     async getUser(email) {
       const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
       if (!row) return null;

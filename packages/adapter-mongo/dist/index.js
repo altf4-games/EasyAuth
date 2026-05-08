@@ -37,6 +37,7 @@ async function ensureIndexes(db) {
   await db.collection("lockouts").createIndex({ email: 1 }, { unique: true, background: true });
   await db.collection("totp_secrets").createIndex({ email: 1 }, { unique: true, background: true });
   await db.collection("backup_codes").createIndex({ email: 1, hashedCode: 1 }, { background: true });
+  await db.collection("oauth_accounts").createIndex({ provider: 1, providerAccountId: 1 }, { unique: true, background: true });
 }
 function mongoAdapter(options) {
   const client = new import_mongodb.MongoClient(options.uri);
@@ -58,6 +59,20 @@ function mongoAdapter(options) {
     return d.collection(name);
   }
   return {
+    async getUserByOAuth(provider, providerAccountId) {
+      const oauth = await col("oauth_accounts");
+      const doc = await oauth.findOne({ provider, providerAccountId });
+      if (!doc) return null;
+      return this.getUser(doc.email);
+    },
+    async linkOAuthAccount(email, provider, providerAccountId) {
+      const oauth = await col("oauth_accounts");
+      await oauth.updateOne(
+        { provider, providerAccountId },
+        { $setOnInsert: { provider, providerAccountId, email } },
+        { upsert: true }
+      );
+    },
     async getUser(email) {
       const users = await col("users");
       const doc = await users.findOne({ email });

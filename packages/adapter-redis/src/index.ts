@@ -24,9 +24,22 @@ interface RedisAdapterOptions {
  * @returns A StorageAdapter ready to pass to createAuth().
  */
 export function redisAdapter(options: RedisAdapterOptions): StorageAdapter {
-  const redis = options.client ?? new Redis(options.url ?? "redis://localhost:6379");
+  const redis =
+    options.client ?? new Redis(options.url ?? "redis://localhost:6379");
 
   return {
+    async getUserByOAuth(provider, providerAccountId) {
+      const email = await redis.get(
+        key(`oauth:${provider}`, providerAccountId),
+      );
+      if (!email) return null;
+      return this.getUser(email);
+    },
+
+    async linkOAuthAccount(email, provider, providerAccountId) {
+      await redis.set(key(`oauth:${provider}`, providerAccountId), email);
+    },
+
     async getUser(email) {
       const raw = await redis.get(key("user", email));
       if (!raw) return null;
@@ -63,12 +76,20 @@ export function redisAdapter(options: RedisAdapterOptions): StorageAdapter {
     async incrementOTPAttempts(email) {
       const raw = await redis.get(key("otp", email));
       if (!raw) return 0;
-      const record = JSON.parse(raw) as { hashedCode: string; attempts: number };
+      const record = JSON.parse(raw) as {
+        hashedCode: string;
+        attempts: number;
+      };
       record.attempts += 1;
       // Preserve remaining TTL when updating attempts
       const ttl = await redis.ttl(key("otp", email));
       const remainingTtl = ttl > 0 ? ttl : 600;
-      await redis.set(key("otp", email), JSON.stringify(record), "EX", remainingTtl);
+      await redis.set(
+        key("otp", email),
+        JSON.stringify(record),
+        "EX",
+        remainingTtl,
+      );
       return record.attempts;
     },
 
@@ -79,7 +100,12 @@ export function redisAdapter(options: RedisAdapterOptions): StorageAdapter {
     async setLockout(email, untilTimestamp) {
       const ttlSeconds = Math.ceil((untilTimestamp - Date.now()) / 1000);
       if (ttlSeconds > 0) {
-        await redis.set(key("lockout", email), String(untilTimestamp), "EX", ttlSeconds);
+        await redis.set(
+          key("lockout", email),
+          String(untilTimestamp),
+          "EX",
+          ttlSeconds,
+        );
       }
     },
 
@@ -104,7 +130,7 @@ export function redisAdapter(options: RedisAdapterOptions): StorageAdapter {
       if (user) {
         await redis.set(
           key("user", email),
-          JSON.stringify({ ...user, totpEnabled: enabled })
+          JSON.stringify({ ...user, totpEnabled: enabled }),
         );
       }
     },

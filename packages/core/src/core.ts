@@ -82,6 +82,19 @@ export interface AuthInstance {
   verify2FA(email: string, totpCode: string): Promise<void>;
 
   /**
+   * Generates the Google OAuth authorization URL to redirect the user to.
+   * @param state - Optional state to pass along to Google.
+   */
+  getGoogleAuthUrl(state?: string): string;
+
+  /**
+   * Completes the Google OAuth flow by exchanging the authorization code for tokens.
+   * @param code - The authorization code returned from Google.
+   * @throws {AuthError} OAUTH_FAILED | ACCOUNT_LOCKED
+   */
+  verifyGoogleCallback(code: string): Promise<VerifyOTPResult>;
+
+  /**
    * Revokes all sessions for a user by bumping their session generation counter.
    * Any previously issued tokens will fail verifyToken after this call.
    * @param email - The user whose sessions to revoke.
@@ -97,13 +110,18 @@ function validateConfig(config: AuthConfig): void {
   if (config.jwt.secret.length < MIN_JWT_SECRET_LENGTH) {
     throw new AuthError(
       "CONFIG_INVALID",
-      `jwt.secret must be at least ${MIN_JWT_SECRET_LENGTH} characters long`
+      `jwt.secret must be at least ${MIN_JWT_SECRET_LENGTH} characters long`,
     );
   }
-  if (!config.smtp.host || !config.smtp.auth?.user || !config.smtp.auth?.pass || !config.smtp.from) {
+  if (
+    !config.smtp.host ||
+    !config.smtp.auth?.user ||
+    !config.smtp.auth?.pass ||
+    !config.smtp.from
+  ) {
     throw new AuthError(
       "CONFIG_INVALID",
-      "smtp config is missing required fields: host, auth.user, auth.pass, from"
+      "smtp config is missing required fields: host, auth.user, auth.pass, from",
     );
   }
 }
@@ -117,7 +135,10 @@ function validateConfig(config: AuthConfig): void {
  * @returns An AuthInstance exposing the public auth API.
  * @throws {AuthError} CONFIG_INVALID synchronously if config is invalid.
  */
-export function createAuth(config: AuthConfig, logger: Logger = noopLogger): AuthInstance {
+export function createAuth(
+  config: AuthConfig,
+  logger: Logger = noopLogger,
+): AuthInstance {
   validateConfig(config);
 
   const store: StorageAdapter = config.store ?? new MemoryAdapter();
@@ -126,7 +147,7 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
   if (!config.store) {
     logger.warn(
       "easy-auth: No storage adapter provided. Using in-memory adapter. " +
-        "All auth state will be lost on process restart. Set config.store for production."
+        "All auth state will be lost on process restart. Set config.store for production.",
     );
   }
 
@@ -139,7 +160,10 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
 
   async function sendOTP(email: string): Promise<void> {
     if (!isValidEmail(email)) {
-      throw new AuthError("INVALID_EMAIL", "The provided email address is not valid");
+      throw new AuthError(
+        "INVALID_EMAIL",
+        "The provided email address is not valid",
+      );
     }
 
     const code = generateOTP(otpLength);
@@ -151,9 +175,15 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
     logger.info("OTP sent", { email });
   }
 
-  async function verifyOTP(email: string, code: string): Promise<VerifyOTPResult> {
+  async function verifyOTP(
+    email: string,
+    code: string,
+  ): Promise<VerifyOTPResult> {
     if (!isValidEmail(email)) {
-      throw new AuthError("INVALID_EMAIL", "The provided email address is not valid");
+      throw new AuthError(
+        "INVALID_EMAIL",
+        "The provided email address is not valid",
+      );
     }
 
     // Check lockout before doing anything else
@@ -161,13 +191,16 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
     if (lockedUntil !== null) {
       throw new AuthError(
         "ACCOUNT_LOCKED",
-        "Too many failed attempts. Try again later."
+        "Too many failed attempts. Try again later.",
       );
     }
 
     const otpRecord = await store.getOTP(email);
     if (!otpRecord) {
-      throw new AuthError("OTP_EXPIRED", "No valid OTP found. Request a new code.");
+      throw new AuthError(
+        "OTP_EXPIRED",
+        "No valid OTP found. Request a new code.",
+      );
     }
 
     // Enforce attempt limit before comparing to prevent brute force even with bcrypt
@@ -177,7 +210,7 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
       await store.deleteOTP(email);
       throw new AuthError(
         "OTP_MAX_ATTEMPTS",
-        "Maximum verification attempts reached. Account is temporarily locked."
+        "Maximum verification attempts reached. Account is temporarily locked.",
       );
     }
 
@@ -191,7 +224,7 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
         await store.deleteOTP(email);
         throw new AuthError(
           "OTP_MAX_ATTEMPTS",
-          "Maximum verification attempts reached. Account is temporarily locked."
+          "Maximum verification attempts reached. Account is temporarily locked.",
         );
       }
       throw new AuthError("OTP_INVALID", "The code you entered is incorrect");
@@ -219,7 +252,10 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
     const user = await store.getUser(email);
     if (!user) {
       // Token was valid but the user no longer exists or was revoked
-      throw new AuthError("TOKEN_INVALID", "User associated with this token no longer exists");
+      throw new AuthError(
+        "TOKEN_INVALID",
+        "User associated with this token no longer exists",
+      );
     }
 
     return user;
@@ -227,14 +263,17 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
 
   async function enroll2FA(email: string): Promise<Enroll2FAResult> {
     // Derive issuer from SMTP from field
-    const issuerMatch = config.smtp.from.match(/<(.+)>/) ?? [null, config.smtp.from];
+    const issuerMatch = config.smtp.from.match(/<(.+)>/) ?? [
+      null,
+      config.smtp.from,
+    ];
     const domain = (issuerMatch[1] ?? config.smtp.from).split("@")[1] ?? "app";
 
     const { secret, otpauthUri, backupCodes } = await enrollTOTP(
       email,
       store,
       jwtSecret,
-      domain
+      domain,
     );
 
     // Generate a QR code data URL using a minimal inline approach (no heavy deps)
@@ -254,6 +293,109 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
     logger.info("2FA verified", { email });
   }
 
+  function getGoogleAuthUrl(state?: string): string {
+    if (!config.oauth?.google) {
+      throw new AuthError("CONFIG_INVALID", "Google OAuth is not configured");
+    }
+    const { clientId, redirectUri } = config.oauth.google;
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "openid email profile");
+    if (state) {
+      url.searchParams.set("state", state);
+    }
+    return url.toString();
+  }
+
+  async function verifyGoogleCallback(code: string): Promise<VerifyOTPResult> {
+    if (!config.oauth?.google) {
+      throw new AuthError("CONFIG_INVALID", "Google OAuth is not configured");
+    }
+    const { clientId, clientSecret, redirectUri } = config.oauth.google;
+
+    // Exchange code for tokens
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      logger.warn("Google token exchange failed", { status: tokenRes.status });
+      throw new AuthError("OAUTH_FAILED", "Failed to authenticate with Google");
+    }
+
+    const tokenData = (await tokenRes.json()) as any;
+    const accessToken = tokenData.access_token;
+
+    // Fetch user info
+    const userRes = await fetch(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    );
+
+    if (!userRes.ok) {
+      logger.warn("Google user info fetch failed", { status: userRes.status });
+      throw new AuthError(
+        "OAUTH_FAILED",
+        "Failed to fetch user profile from Google",
+      );
+    }
+
+    const userData = (await userRes.json()) as any;
+    const email = userData.email;
+    const googleId = userData.sub;
+
+    if (!email) {
+      throw new AuthError(
+        "OAUTH_FAILED",
+        "Google account has no email associated",
+      );
+    }
+
+    // Check lockout
+    const lockedUntil = await store.getLockout(email);
+    if (lockedUntil !== null) {
+      throw new AuthError(
+        "ACCOUNT_LOCKED",
+        "Too many failed attempts. Try again later.",
+      );
+    }
+
+    let user = await store.getUserByOAuth?.("google", googleId);
+    let isNewUser = false;
+
+    if (!user) {
+      // Check if user exists by email
+      const existingUser = await store.getUser(email);
+      isNewUser = existingUser === null;
+      user = await store.upsertUser(email, {
+        name: userData.name,
+        picture: userData.picture,
+      });
+
+      // Link the account if method is available
+      if (store.linkOAuthAccount) {
+        await store.linkOAuthAccount(email, "google", googleId);
+      }
+    }
+
+    const token = signToken(email, jwtSecret, jwtExpiresIn);
+    logger.info("Google OAuth verified", { email, isNewUser });
+
+    return { token, user, isNewUser };
+  }
+
   async function revokeUser(email: string): Promise<void> {
     // Revocation is achieved by deleting all active state. Since we include a jti
     // per token, full per-token revocation requires a denylist which is out of scope for v1.
@@ -270,5 +412,7 @@ export function createAuth(config: AuthConfig, logger: Logger = noopLogger): Aut
     confirm2FA,
     verify2FA,
     revokeUser,
+    getGoogleAuthUrl,
+    verifyGoogleCallback,
   };
 }

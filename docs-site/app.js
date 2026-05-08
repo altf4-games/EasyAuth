@@ -565,6 +565,42 @@ app.<span class="token function">get</span>(<span class="token string">'/api/aut
     `,
   },
 
+  "google-oauth": {
+    title: "Google OAuth",
+    toc: ["Configuration", "Implementation"],
+    content: `
+      <h1>Google OAuth</h1>
+      <p class="lead">Fast integration for "Sign in with Google" flows.</p>
+
+      <h2 id="configuration">Configuration</h2>
+      <p>EasyAuth natively supports Google OAuth. To configure it, add your <code>clientId</code>, <code>clientSecret</code>, and <code>redirectUri</code> to your Auth config.</p>
+<pre><code class="language-javascript">import { createAuth } from "@easy-auth/core";
+
+const auth = createAuth({
+  // ... other config
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri: "http://localhost:3000/api/auth/google/callback",
+    }
+  }
+});
+</code></pre>
+
+      <h2 id="implementation">Implementation</h2>
+      <p>Provide two endpoints to handle the redirect to Google and the OAuth callback.</p>
+<pre><code class="language-javascript">app.get("/api/auth/google", (req, res) => {
+  res.redirect(auth.getGoogleAuthUrl());
+});
+
+app.get("/api/auth/google/callback", async (req, res) => {
+  const result = await auth.verifyGoogleCallback(req.query.code);
+  res.json(result); // { token, user, isNewUser }
+});</code></pre>
+    `,
+  },
+
   "email-otp": {
     title: "Email OTP",
     toc: ["How it works", "sendOTP", "verifyOTP", "Brute Force Protection"],

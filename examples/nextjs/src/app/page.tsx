@@ -13,10 +13,10 @@ export default function Home() {
         apiBaseUrl="http://localhost:3000/api/auth"
         onClose={() => console.log("Closed modal")}
         onSuccess={async (token, user, isNewUser) => {
-          // Typically we set an httpOnly cookie. For this client example, 
+          // Typically we set an httpOnly cookie. For this client example,
           // we call a Next Server Action or Route Handler to set the cookie securely.
-          await fetch('/api/auth/session', {
-            method: 'POST',
+          await fetch("/api/auth/session", {
+            method: "POST",
             body: JSON.stringify({ token }),
           });
           router.push("/dashboard");

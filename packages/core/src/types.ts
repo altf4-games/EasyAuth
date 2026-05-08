@@ -16,10 +16,21 @@ export interface StorageAdapter {
   // User operations
   getUser(email: string): Promise<User | null>;
   upsertUser(email: string, metadata?: Record<string, unknown>): Promise<User>;
+  getUserByOAuth(
+    provider: string,
+    providerAccountId: string,
+  ): Promise<User | null>;
+  linkOAuthAccount(
+    email: string,
+    provider: string,
+    providerAccountId: string,
+  ): Promise<void>;
 
   // OTP operations
   setOTP(email: string, hashedCode: string, ttlSeconds: number): Promise<void>;
-  getOTP(email: string): Promise<{ hashedCode: string; attempts: number } | null>;
+  getOTP(
+    email: string,
+  ): Promise<{ hashedCode: string; attempts: number } | null>;
   incrementOTPAttempts(email: string): Promise<number>;
   deleteOTP(email: string): Promise<void>;
 
@@ -58,6 +69,13 @@ export interface AuthConfig {
     lockoutSeconds?: number;
   };
   store?: StorageAdapter;
+  oauth?: {
+    google?: {
+      clientId: string;
+      clientSecret: string;
+      redirectUri: string;
+    };
+  };
   email?: {
     subject?: string;
     templateFn?: (code: string) => { text: string; html: string };
@@ -75,4 +93,5 @@ export type AuthErrorCode =
   | "2FA_NOT_ENROLLED"
   | "2FA_INVALID"
   | "2FA_ALREADY_ENROLLED"
-  | "CONFIG_INVALID";
+  | "CONFIG_INVALID"
+  | "OAUTH_FAILED";

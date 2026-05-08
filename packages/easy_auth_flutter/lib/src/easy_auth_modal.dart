@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'models.dart';
 
@@ -11,6 +12,7 @@ class EasyAuthModal extends StatefulWidget {
   final EasyAuthLabels labels;
   final Map<String, String>? errorMessages;
   final http.Client? client;
+  final bool enableGoogleOAuth;
 
   const EasyAuthModal({
     super.key,
@@ -18,6 +20,7 @@ class EasyAuthModal extends StatefulWidget {
     this.labels = const EasyAuthLabels(),
     this.errorMessages,
     this.client,
+    this.enableGoogleOAuth = true,
   });
 
   /// Displays the authentication modal as a bottom sheet.
@@ -29,6 +32,7 @@ class EasyAuthModal extends StatefulWidget {
     Map<String, String>? errorMessages,
     bool isScrollControlled = true,
     http.Client? client,
+    bool enableGoogleOAuth = true,
   }) {
     return showModalBottomSheet<EasyAuthResult>(
       context: context,
@@ -45,6 +49,7 @@ class EasyAuthModal extends StatefulWidget {
           labels: labels,
           errorMessages: errorMessages,
           client: client,
+          enableGoogleOAuth: enableGoogleOAuth,
         ),
       ),
     );
@@ -75,7 +80,8 @@ class _EasyAuthModalState extends State<EasyAuthModal> {
     super.dispose();
   }
 
-  Future<Map<String, dynamic>> _post(String path, Map<String, String> body) async {
+  Future<Map<String, dynamic>> _post(
+      String path, Map<String, String> body) async {
     final client = widget.client ?? http.Client();
     try {
       final response = await client.post(
@@ -188,8 +194,8 @@ class _EasyAuthModalState extends State<EasyAuthModal> {
     try {
       final data = await _post('verify-2fa', {'email': email, 'code': code});
       final token = data['token'] as String? ?? _pendingToken!;
-      final user = data['user'] != null 
-          ? EasyAuthUser.fromJson(data['user'] as Map<String, dynamic>) 
+      final user = data['user'] != null
+          ? EasyAuthUser.fromJson(data['user'] as Map<String, dynamic>)
           : _pendingUser!;
 
       if (mounted) {
@@ -293,6 +299,47 @@ class _EasyAuthModalState extends State<EasyAuthModal> {
                     )
                   : Text(widget.labels.sendCodeButton),
             ),
+            if (widget.enableGoogleOAuth) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: const [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text('Or continue with',
+                        style: TextStyle(color: Colors.grey)),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  // We add a default URL scheme if the host application hasn't overridden but apps should configure their own deep linking.
+                  final baseUrlStr = widget.apiBaseUrl
+                      .toString()
+                      .replaceAll(RegExp(r'/$'), '');
+                  final url = Uri.parse(
+                      '$baseUrlStr/google?returnTo=easyauth://callback');
+                  try {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                    if (mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  } catch (e) {
+                    setState(() {
+                      _error = 'Could not open Google sign in';
+                    });
+                  }
+                },
+                icon: const Icon(Icons.g_mobiledata, size: 32),
+                label: const Text('Sign in with Google',
+                    style: TextStyle(fontSize: 16)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ],
           ] else ...[
             TextField(
               controller: _otpController,
@@ -308,11 +355,12 @@ class _EasyAuthModalState extends State<EasyAuthModal> {
               maxLength: 6,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, letterSpacing: 8),
-              onSubmitted: (_) => _step == _Step.otp ? _verifyOtp() : _verify2Fa(),
+              onSubmitted: (_) =>
+                  _step == _Step.otp ? _verifyOtp() : _verify2Fa(),
               enabled: !_isLoading,
             ),
             const SizedBox(height: 16),
-             if (_error != null)
+            if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(

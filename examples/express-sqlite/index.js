@@ -31,6 +31,13 @@ const auth = createAuth({
     },
     from: process.env.SMTP_FROM || "Example App <noreply@example.com>",
   },
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      redirectUri: process.env.GOOGLE_REDIRECT_URI,
+    },
+  },
   // the easy-auth-sqlite adapter stores the DB at this file path
   store: sqliteAdapter("./auth.db"),
 });
@@ -104,6 +111,56 @@ app.post("/api/auth/verify-2fa", async (req, res) => {
   }
 });
 
+/**
+ * 4. Redirect to Google OAuth
+ */
+app.get("/api/auth/google", (req, res) => {
+  try {
+    // We can pass a state parameter to remember where to redirect later
+    const returnTo = req.query.returnTo?.toString() || "";
+    // Pass stringified state
+    const state = JSON.stringify({ returnTo });
+    const url = auth.getGoogleAuthUrl(state);
+    res.redirect(url);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate Google Auth URL" });
+  }
+});
+
+/**
+ * 5. Handle Google OAuth Callback
+ */
+app.get("/api/auth/google/callback", async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    if (!code) {
+      return res.status(400).json({ error: "Missing authorization code" });
+    }
+    const result = await auth.verifyGoogleCallback(code.toString());
+
+    // Parse state to see if we need to redirect back to frontend
+    if (state) {
+      try {
+        const parsedState = JSON.parse(state.toString());
+        if (parsedState.returnTo) {
+          return res.redirect(
+            `${parsedState.returnTo}?token=${result.token}&isNewUser=${result.isNewUser}`,
+          );
+        }
+      } catch (e) {
+        console.error("Failed to parse state", state, e);
+      }
+    } else {
+      console.warn("Google callback received no state parameter");
+    }
+
+    res.json(result);
+  } catch (err) {
+    const status = mapErrorToStatus(err);
+    res.status(status).json({ error: err.code || "UNKNOWN" });
+  }
+});
+
 // ----------------------------------------------------
 // Protected Application Routes
 // ----------------------------------------------------
@@ -119,10 +176,10 @@ app.get("/api/user", async (req, res) => {
     }
 
     const token = authHeader.split(" ")[1];
-    
+
     // verifyToken throws if expired, tampered, or invalid.
     const user = await auth.verifyToken(token);
-    
+
     res.json({ user });
   } catch (err) {
     const status = mapErrorToStatus(err);

@@ -29,24 +29,45 @@ interface BackupCodeDoc {
   used: boolean;
 }
 
+interface OAuthDoc {
+  provider: string;
+  providerAccountId: string;
+  email: string;
+}
+
 /**
  * Ensures all indexes exist. Called once on first connection.
  * Idempotent — safe to call multiple times.
  */
 async function ensureIndexes(db: Db): Promise<void> {
   // TTL index: MongoDB automatically deletes documents when expiresAt passes
-  await db.collection<OTPDoc>("otp_state").createIndex(
-    { expiresAt: 1 },
-    { expireAfterSeconds: 0, background: true }
-  );
-  await db.collection<LockoutDoc>("lockouts").createIndex(
-    { lockedUntil: 1 },
-    { expireAfterSeconds: 0, background: true }
-  );
-  await db.collection<OTPDoc>("otp_state").createIndex({ email: 1 }, { unique: true, background: true });
-  await db.collection<LockoutDoc>("lockouts").createIndex({ email: 1 }, { unique: true, background: true });
-  await db.collection<TOTPSecretDoc>("totp_secrets").createIndex({ email: 1 }, { unique: true, background: true });
-  await db.collection<BackupCodeDoc>("backup_codes").createIndex({ email: 1, hashedCode: 1 }, { background: true });
+  await db
+    .collection<OTPDoc>("otp_state")
+    .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
+  await db
+    .collection<LockoutDoc>("lockouts")
+    .createIndex(
+      { lockedUntil: 1 },
+      { expireAfterSeconds: 0, background: true },
+    );
+  await db
+    .collection<OTPDoc>("otp_state")
+    .createIndex({ email: 1 }, { unique: true, background: true });
+  await db
+    .collection<LockoutDoc>("lockouts")
+    .createIndex({ email: 1 }, { unique: true, background: true });
+  await db
+    .collection<TOTPSecretDoc>("totp_secrets")
+    .createIndex({ email: 1 }, { unique: true, background: true });
+  await db
+    .collection<BackupCodeDoc>("backup_codes")
+    .createIndex({ email: 1, hashedCode: 1 }, { background: true });
+  await db
+    .collection<OAuthDoc>("oauth_accounts")
+    .createIndex(
+      { provider: 1, providerAccountId: 1 },
+      { unique: true, background: true },
+    );
 }
 
 /**
@@ -81,6 +102,21 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
   }
 
   return {
+    async getUserByOAuth(provider, providerAccountId) {
+      const oauth = await col<OAuthDoc>("oauth_accounts");
+      const doc = await oauth.findOne({ provider, providerAccountId });
+      if (!doc) return null;
+      return this.getUser(doc.email);
+    },
+
+    async linkOAuthAccount(email, provider, providerAccountId) {
+      const oauth = await col<OAuthDoc>("oauth_accounts");
+      await oauth.updateOne(
+        { provider, providerAccountId },
+        { $setOnInsert: { provider, providerAccountId, email } },
+        { upsert: true },
+      );
+    },
     async getUser(email) {
       const users = await col<User & { _id?: unknown }>("users");
       const doc = await users.findOne({ email });
@@ -108,7 +144,7 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
           },
           $set: { lastLoginAt: now },
         },
-        { upsert: true }
+        { upsert: true },
       );
       const user = await this.getUser(email);
       return user as User;
@@ -120,7 +156,7 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
       await otps.updateOne(
         { email },
         { $set: { email, hashedCode, attempts: 0, expiresAt } },
-        { upsert: true }
+        { upsert: true },
       );
     },
 
@@ -136,7 +172,7 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
       const result = await otps.findOneAndUpdate(
         { email },
         { $inc: { attempts: 1 } },
-        { returnDocument: "after" }
+        { returnDocument: "after" },
       );
       return result?.attempts ?? 0;
     },
@@ -151,13 +187,16 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
       await lockouts.updateOne(
         { email },
         { $set: { email, lockedUntil: new Date(untilTimestamp) } },
-        { upsert: true }
+        { upsert: true },
       );
     },
 
     async getLockout(email) {
       const lockouts = await col<LockoutDoc>("lockouts");
-      const doc = await lockouts.findOne({ email, lockedUntil: { $gt: new Date() } });
+      const doc = await lockouts.findOne({
+        email,
+        lockedUntil: { $gt: new Date() },
+      });
       return doc ? doc.lockedUntil.getTime() : null;
     },
 
@@ -166,7 +205,7 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
       await secrets.updateOne(
         { email },
         { $set: { email, encryptedSecret } },
-        { upsert: true }
+        { upsert: true },
       );
     },
 
@@ -192,7 +231,7 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
       await codes.deleteMany({ email });
       if (hashedCodes.length > 0) {
         await codes.insertMany(
-          hashedCodes.map((hc) => ({ email, hashedCode: hc, used: false }))
+          hashedCodes.map((hc) => ({ email, hashedCode: hc, used: false })),
         );
       }
     },
@@ -202,7 +241,7 @@ export function mongoAdapter(options: MongoAdapterOptions): StorageAdapter {
       const result = await codes.findOneAndUpdate(
         { email, hashedCode, used: false },
         { $set: { used: true } },
-        { returnDocument: "after" }
+        { returnDocument: "after" },
       );
       return result !== null;
     },

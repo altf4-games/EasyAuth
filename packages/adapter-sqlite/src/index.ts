@@ -46,6 +46,14 @@ CREATE TABLE IF NOT EXISTS backup_codes (
 CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS oauth_accounts (
+  provider            TEXT NOT NULL,
+  provider_account_id TEXT NOT NULL,
+  email               TEXT NOT NULL,
+  PRIMARY KEY (provider, provider_account_id),
+  FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+);
 `;
 
 /**
@@ -61,7 +69,7 @@ function runMigrations(db: Database.Database): void {
 
   if (!row) {
     db.prepare("INSERT INTO schema_version (version) VALUES (?)").run(
-      CURRENT_SCHEMA_VERSION
+      CURRENT_SCHEMA_VERSION,
     );
   }
   // Future migrations: if (row.version < 2) { ... }
@@ -85,8 +93,26 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
   runMigrations(db);
 
   return {
+    async getUserByOAuth(provider, providerAccountId) {
+      const row = db
+        .prepare(
+          "SELECT email FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?",
+        )
+        .get(provider, providerAccountId) as { email: string } | undefined;
+      if (!row) return null;
+      return this.getUser(row.email);
+    },
+
+    async linkOAuthAccount(email, provider, providerAccountId) {
+      db.prepare(
+        "INSERT INTO oauth_accounts (provider, provider_account_id, email) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+      ).run(provider, providerAccountId, email);
+    },
+
     async getUser(email) {
-      const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as
+      const row = db
+        .prepare("SELECT * FROM users WHERE email = ?")
+        .get(email) as
         | {
             email: string;
             created_at: number;
@@ -106,15 +132,18 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
     },
 
     async upsertUser(email, metadata) {
-      const existing = db.prepare("SELECT created_at FROM users WHERE email = ?").get(email) as
-        | { created_at: number }
-        | undefined;
+      const existing = db
+        .prepare("SELECT created_at FROM users WHERE email = ?")
+        .get(email) as { created_at: number } | undefined;
       const now = Date.now();
       if (existing) {
-        db.prepare("UPDATE users SET last_login_at = ? WHERE email = ?").run(now, email);
+        db.prepare("UPDATE users SET last_login_at = ? WHERE email = ?").run(
+          now,
+          email,
+        );
       } else {
         db.prepare(
-          "INSERT INTO users (email, created_at, last_login_at, totp_enabled, metadata) VALUES (?, ?, ?, 0, ?)"
+          "INSERT INTO users (email, created_at, last_login_at, totp_enabled, metadata) VALUES (?, ?, ?, 0, ?)",
         ).run(email, now, now, JSON.stringify(metadata ?? {}));
       }
       return (await this.getUser(email)) as User;
@@ -123,14 +152,14 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
     async setOTP(email, hashedCode, ttlSeconds) {
       const expiresAt = Date.now() + ttlSeconds * 1000;
       db.prepare(
-        "INSERT INTO otp_state (email, hashed_code, attempts, expires_at) VALUES (?, ?, 0, ?) ON CONFLICT(email) DO UPDATE SET hashed_code = excluded.hashed_code, attempts = 0, expires_at = excluded.expires_at"
+        "INSERT INTO otp_state (email, hashed_code, attempts, expires_at) VALUES (?, ?, 0, ?) ON CONFLICT(email) DO UPDATE SET hashed_code = excluded.hashed_code, attempts = 0, expires_at = excluded.expires_at",
       ).run(email, hashedCode, expiresAt);
     },
 
     async getOTP(email) {
       const row = db
         .prepare(
-          "SELECT hashed_code, attempts FROM otp_state WHERE email = ? AND expires_at > ?"
+          "SELECT hashed_code, attempts FROM otp_state WHERE email = ? AND expires_at > ?",
         )
         .get(email, Date.now()) as
         | { hashed_code: string; attempts: number }
@@ -143,7 +172,7 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
       // Use a two-step pattern: read current, write incremented value.
       // RETURNING is a SQLite 3.35+ feature; we keep this compatible with older versions.
       db.prepare(
-        "UPDATE otp_state SET attempts = attempts + 1 WHERE email = ?"
+        "UPDATE otp_state SET attempts = attempts + 1 WHERE email = ?",
       ).run(email);
       const row = db
         .prepare("SELECT attempts FROM otp_state WHERE email = ?")
@@ -157,20 +186,22 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
 
     async setLockout(email, untilTimestamp) {
       db.prepare(
-        "INSERT INTO lockouts (email, locked_until) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET locked_until = excluded.locked_until"
+        "INSERT INTO lockouts (email, locked_until) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET locked_until = excluded.locked_until",
       ).run(email, untilTimestamp);
     },
 
     async getLockout(email) {
       const row = db
-        .prepare("SELECT locked_until FROM lockouts WHERE email = ? AND locked_until > ?")
+        .prepare(
+          "SELECT locked_until FROM lockouts WHERE email = ? AND locked_until > ?",
+        )
         .get(email, Date.now()) as { locked_until: number } | undefined;
       return row?.locked_until ?? null;
     },
 
     async setTOTPSecret(email, encryptedSecret) {
       db.prepare(
-        "INSERT INTO totp_secrets (email, encrypted_secret) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET encrypted_secret = excluded.encrypted_secret"
+        "INSERT INTO totp_secrets (email, encrypted_secret) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET encrypted_secret = excluded.encrypted_secret",
       ).run(email, encryptedSecret);
     },
 
@@ -184,7 +215,7 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
     async setTOTPEnabled(email, enabled) {
       db.prepare("UPDATE users SET totp_enabled = ? WHERE email = ?").run(
         enabled ? 1 : 0,
-        email
+        email,
       );
     },
 
@@ -199,7 +230,7 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
       const insertMany = db.transaction((codes: string[]) => {
         db.prepare("DELETE FROM backup_codes WHERE email = ?").run(email);
         const insert = db.prepare(
-          "INSERT INTO backup_codes (email, hashed_code, used) VALUES (?, ?, 0)"
+          "INSERT INTO backup_codes (email, hashed_code, used) VALUES (?, ?, 0)",
         );
         for (const code of codes) {
           insert.run(email, code);
@@ -215,7 +246,7 @@ export function sqliteAdapter(dbPath: string): SQLiteAdapter {
     async consumeBackupCode(email, hashedCode) {
       const rows = db
         .prepare(
-          "SELECT id, hashed_code FROM backup_codes WHERE email = ? AND used = 0"
+          "SELECT id, hashed_code FROM backup_codes WHERE email = ? AND used = 0",
         )
         .all(email) as { id: number; hashed_code: string }[];
       const match = rows.find((r) => r.hashed_code === hashedCode);

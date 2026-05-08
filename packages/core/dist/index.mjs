@@ -288,6 +288,16 @@ var MemoryAdapter = class {
   otps = /* @__PURE__ */ new Map();
   lockouts = /* @__PURE__ */ new Map();
   totp = /* @__PURE__ */ new Map();
+  oauth = /* @__PURE__ */ new Map();
+  // provider:providerAccountId -> email
+  async getUserByOAuth(provider, providerAccountId) {
+    const email = this.oauth.get(`${provider}:${providerAccountId}`);
+    if (!email) return null;
+    return this.users.get(email) ?? null;
+  }
+  async linkOAuthAccount(email, provider, providerAccountId) {
+    this.oauth.set(`${provider}:${providerAccountId}`, email);
+  }
   async getUser(email) {
     return this.users.get(email) ?? null;
   }
@@ -521,6 +531,74 @@ function createAuth(config, logger = noopLogger) {
     await verifyTOTP(email, totpCode, store, jwtSecret);
     logger.info("2FA verified", { email });
   }
+  function getGoogleAuthUrl(state) {
+    if (!config.oauth?.google) {
+      throw new AuthError("CONFIG_INVALID", "Google OAuth is not configured");
+    }
+    const { clientId, redirectUri } = config.oauth.google;
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("scope", "openid email profile");
+    if (state) {
+      url.searchParams.set("state", state);
+    }
+    return url.toString();
+  }
+  async function verifyGoogleCallback(code) {
+    if (!config.oauth?.google) {
+      throw new AuthError("CONFIG_INVALID", "Google OAuth is not configured");
+    }
+    const { clientId, clientSecret, redirectUri } = config.oauth.google;
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: redirectUri
+      })
+    });
+    if (!tokenRes.ok) {
+      logger.warn("Google token exchange failed", { status: tokenRes.status });
+      throw new AuthError("OAUTH_FAILED", "Failed to authenticate with Google");
+    }
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+    const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!userRes.ok) {
+      logger.warn("Google user info fetch failed", { status: userRes.status });
+      throw new AuthError("OAUTH_FAILED", "Failed to fetch user profile from Google");
+    }
+    const userData = await userRes.json();
+    const email = userData.email;
+    const googleId = userData.sub;
+    if (!email) {
+      throw new AuthError("OAUTH_FAILED", "Google account has no email associated");
+    }
+    const lockedUntil = await store.getLockout(email);
+    if (lockedUntil !== null) {
+      throw new AuthError("ACCOUNT_LOCKED", "Too many failed attempts. Try again later.");
+    }
+    let user = await store.getUserByOAuth?.("google", googleId);
+    let isNewUser = false;
+    if (!user) {
+      const existingUser = await store.getUser(email);
+      isNewUser = existingUser === null;
+      user = await store.upsertUser(email, { name: userData.name, picture: userData.picture });
+      if (store.linkOAuthAccount) {
+        await store.linkOAuthAccount(email, "google", googleId);
+      }
+    }
+    const token = signToken(email, jwtSecret, jwtExpiresIn);
+    logger.info("Google OAuth verified", { email, isNewUser });
+    return { token, user, isNewUser };
+  }
   async function revokeUser(email) {
     await store.deleteOTP(email);
     logger.info("User sessions revoked", { email });
@@ -532,7 +610,9 @@ function createAuth(config, logger = noopLogger) {
     enroll2FA,
     confirm2FA,
     verify2FA,
-    revokeUser
+    revokeUser,
+    getGoogleAuthUrl,
+    verifyGoogleCallback
   };
 }
 export {

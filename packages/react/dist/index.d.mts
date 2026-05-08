@@ -39,11 +39,13 @@ interface AuthModalProps {
     labels?: Partial<AuthLabels>;
     /** Color scheme — defaults to "auto" (follows system preference) */
     theme?: Theme;
+    /** Disable Google OAuth by passing false, defaults to true */
+    enableGoogleOAuth?: boolean;
 }
 /**
  * AuthModal — handles the full email OTP + optional TOTP 2FA flow.
  * Calls your backend API endpoints and reports success via onSuccess.
  */
-declare function AuthModal({ apiBaseUrl, onSuccess, onClose, className, labels: labelOverrides, theme, }: AuthModalProps): react_jsx_runtime.JSX.Element;
+declare function AuthModal({ apiBaseUrl, onSuccess, onClose, className, labels: labelOverrides, theme, enableGoogleOAuth, }: AuthModalProps): react_jsx_runtime.JSX.Element;
 
 export { type AuthLabels, AuthModal, type AuthModalProps, DEFAULT_LABELS, type UserPayload, getErrorMessage };
