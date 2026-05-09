@@ -1,6 +1,6 @@
 {
   "name": "@altf4-auth/mongo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MongoDB storage adapter for easy-auth",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

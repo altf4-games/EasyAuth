@@ -1,6 +1,6 @@
 {
   "name": "@altf4-auth/core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Email OTP-based authentication with optional TOTP 2FA",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -42,7 +42,9 @@ function redisAdapter(options) {
   const redis = options.client ?? new import_ioredis.default(options.url ?? "redis://localhost:6379");
   return {
     async getUserByOAuth(provider, providerAccountId) {
-      const email = await redis.get(key(`oauth:${provider}`, providerAccountId));
+      const email = await redis.get(
+        key(`oauth:${provider}`, providerAccountId)
+      );
       if (!email) return null;
       return this.getUser(email);
     },
@@ -83,7 +85,12 @@ function redisAdapter(options) {
       record.attempts += 1;
       const ttl = await redis.ttl(key("otp", email));
       const remainingTtl = ttl > 0 ? ttl : 600;
-      await redis.set(key("otp", email), JSON.stringify(record), "EX", remainingTtl);
+      await redis.set(
+        key("otp", email),
+        JSON.stringify(record),
+        "EX",
+        remainingTtl
+      );
       return record.attempts;
     },
     async deleteOTP(email) {
@@ -92,7 +99,12 @@ function redisAdapter(options) {
     async setLockout(email, untilTimestamp) {
       const ttlSeconds = Math.ceil((untilTimestamp - Date.now()) / 1e3);
       if (ttlSeconds > 0) {
-        await redis.set(key("lockout", email), String(untilTimestamp), "EX", ttlSeconds);
+        await redis.set(
+          key("lockout", email),
+          String(untilTimestamp),
+          "EX",
+          ttlSeconds
+        );
       }
     },
     async getLockout(email) {

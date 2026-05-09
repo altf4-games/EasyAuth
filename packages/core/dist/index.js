@@ -486,7 +486,10 @@ function createAuth(config, logger = noopLogger) {
   const jwtSecret = config.jwt.secret;
   async function sendOTP(email) {
     if (!isValidEmail(email)) {
-      throw new AuthError("INVALID_EMAIL", "The provided email address is not valid");
+      throw new AuthError(
+        "INVALID_EMAIL",
+        "The provided email address is not valid"
+      );
     }
     const code = generateOTP(otpLength);
     const hashedCode = await hashValue(code);
@@ -496,7 +499,10 @@ function createAuth(config, logger = noopLogger) {
   }
   async function verifyOTP(email, code) {
     if (!isValidEmail(email)) {
-      throw new AuthError("INVALID_EMAIL", "The provided email address is not valid");
+      throw new AuthError(
+        "INVALID_EMAIL",
+        "The provided email address is not valid"
+      );
     }
     const lockedUntil = await store.getLockout(email);
     if (lockedUntil !== null) {
@@ -507,7 +513,10 @@ function createAuth(config, logger = noopLogger) {
     }
     const otpRecord = await store.getOTP(email);
     if (!otpRecord) {
-      throw new AuthError("OTP_EXPIRED", "No valid OTP found. Request a new code.");
+      throw new AuthError(
+        "OTP_EXPIRED",
+        "No valid OTP found. Request a new code."
+      );
     }
     if (otpRecord.attempts >= maxAttempts) {
       const lockUntil = Date.now() + lockoutSeconds * 1e3;
@@ -545,12 +554,18 @@ function createAuth(config, logger = noopLogger) {
     const email = payload.sub;
     const user = await store.getUser(email);
     if (!user) {
-      throw new AuthError("TOKEN_INVALID", "User associated with this token no longer exists");
+      throw new AuthError(
+        "TOKEN_INVALID",
+        "User associated with this token no longer exists"
+      );
     }
     return user;
   }
   async function enroll2FA(email) {
-    const issuerMatch = config.smtp.from.match(/<(.+)>/) ?? [null, config.smtp.from];
+    const issuerMatch = config.smtp.from.match(/<(.+)>/) ?? [
+      null,
+      config.smtp.from
+    ];
     const domain = (issuerMatch[1] ?? config.smtp.from).split("@")[1] ?? "app";
     const { secret, otpauthUri, backupCodes } = await enrollTOTP(
       email,
@@ -606,29 +621,44 @@ function createAuth(config, logger = noopLogger) {
     }
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
-    const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
+    const userRes = await fetch(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    );
     if (!userRes.ok) {
       logger.warn("Google user info fetch failed", { status: userRes.status });
-      throw new AuthError("OAUTH_FAILED", "Failed to fetch user profile from Google");
+      throw new AuthError(
+        "OAUTH_FAILED",
+        "Failed to fetch user profile from Google"
+      );
     }
     const userData = await userRes.json();
     const email = userData.email;
     const googleId = userData.sub;
     if (!email) {
-      throw new AuthError("OAUTH_FAILED", "Google account has no email associated");
+      throw new AuthError(
+        "OAUTH_FAILED",
+        "Google account has no email associated"
+      );
     }
     const lockedUntil = await store.getLockout(email);
     if (lockedUntil !== null) {
-      throw new AuthError("ACCOUNT_LOCKED", "Too many failed attempts. Try again later.");
+      throw new AuthError(
+        "ACCOUNT_LOCKED",
+        "Too many failed attempts. Try again later."
+      );
     }
     let user = await store.getUserByOAuth?.("google", googleId);
     let isNewUser = false;
     if (!user) {
       const existingUser = await store.getUser(email);
       isNewUser = existingUser === null;
-      user = await store.upsertUser(email, { name: userData.name, picture: userData.picture });
+      user = await store.upsertUser(email, {
+        name: userData.name,
+        picture: userData.picture
+      });
       if (store.linkOAuthAccount) {
         await store.linkOAuthAccount(email, "google", googleId);
       }

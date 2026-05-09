@@ -268,7 +268,14 @@ function AuthModal({
                   className: "w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors mb-4"
                 }
               ),
-              error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { role: "alert", className: "text-sm text-red-600 dark:text-red-400 mb-3", children: error }),
+              error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                "p",
+                {
+                  role: "alert",
+                  className: "text-sm text-red-600 dark:text-red-400 mb-3",
+                  children: error
+                }
+              ),
               /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
                 "button",
                 {
@@ -331,58 +338,78 @@ function AuthModal({
                 ) })
               ] })
             ] }),
-            (step === "otp" || step === "twofa") && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", { onSubmit: step === "otp" ? handleVerifyOTP : handleVerify2FA, noValidate: true, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", { className: "text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-1", children: step === "otp" ? "Check your email" : "Two-factor authentication" }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-sm text-zinc-500 dark:text-zinc-400 mb-6", children: step === "otp" ? labels.otpLabel : labels.twoFALabel }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("fieldset", { "aria-label": step === "otp" ? labels.otpLabel : labels.twoFALabel, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("legend", { className: "sr-only", children: step === "otp" ? labels.otpLabel : labels.twoFALabel }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex gap-2 justify-center mb-4", children: digits.map((digit, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                  "input",
-                  {
-                    id: `auth-digit-${i}`,
-                    ref: (el) => {
-                      digitRefs.current[i] = el;
-                    },
-                    type: "text",
-                    inputMode: "numeric",
-                    pattern: "\\d*",
-                    maxLength: 1,
-                    "aria-label": `Digit ${i + 1} of ${CODE_LENGTH}`,
-                    value: digit,
-                    onChange: (e) => handleDigitChange(i, e.target.value),
-                    onKeyDown: (e) => handleDigitKeyDown(i, e),
-                    onPaste: i === 0 ? handlePaste : void 0,
-                    className: digitInputClass
-                  },
-                  i
-                )) })
-              ] }),
-              error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { role: "alert", className: "text-sm text-red-600 dark:text-red-400 mb-3 text-center", children: error }),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                "button",
-                {
-                  id: "auth-verify-btn",
-                  type: "submit",
-                  disabled: loading || digits.join("").length < CODE_LENGTH,
-                  className: "w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold transition-colors mb-3",
-                  children: loading ? "Verifying\u2026" : step === "otp" ? labels.verifyButton : labels.verifyTwoFAButton
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-                "button",
-                {
-                  id: "auth-back-btn",
-                  type: "button",
-                  onClick: () => {
-                    setStep("email");
-                    setError(null);
-                    setDigits(Array(CODE_LENGTH).fill(""));
-                  },
-                  className: "w-full py-2 rounded-lg text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors",
-                  children: labels.backButton
-                }
-              )
-            ] })
+            (step === "otp" || step === "twofa") && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+              "form",
+              {
+                onSubmit: step === "otp" ? handleVerifyOTP : handleVerify2FA,
+                noValidate: true,
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", { className: "text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-1", children: step === "otp" ? "Check your email" : "Two-factor authentication" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "text-sm text-zinc-500 dark:text-zinc-400 mb-6", children: step === "otp" ? labels.otpLabel : labels.twoFALabel }),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+                    "fieldset",
+                    {
+                      "aria-label": step === "otp" ? labels.otpLabel : labels.twoFALabel,
+                      children: [
+                        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("legend", { className: "sr-only", children: step === "otp" ? labels.otpLabel : labels.twoFALabel }),
+                        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex gap-2 justify-center mb-4", children: digits.map((digit, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                          "input",
+                          {
+                            id: `auth-digit-${i}`,
+                            ref: (el) => {
+                              digitRefs.current[i] = el;
+                            },
+                            type: "text",
+                            inputMode: "numeric",
+                            pattern: "\\d*",
+                            maxLength: 1,
+                            "aria-label": `Digit ${i + 1} of ${CODE_LENGTH}`,
+                            value: digit,
+                            onChange: (e) => handleDigitChange(i, e.target.value),
+                            onKeyDown: (e) => handleDigitKeyDown(i, e),
+                            onPaste: i === 0 ? handlePaste : void 0,
+                            className: digitInputClass
+                          },
+                          i
+                        )) })
+                      ]
+                    }
+                  ),
+                  error && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                    "p",
+                    {
+                      role: "alert",
+                      className: "text-sm text-red-600 dark:text-red-400 mb-3 text-center",
+                      children: error
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                    "button",
+                    {
+                      id: "auth-verify-btn",
+                      type: "submit",
+                      disabled: loading || digits.join("").length < CODE_LENGTH,
+                      className: "w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold transition-colors mb-3",
+                      children: loading ? "Verifying\u2026" : step === "otp" ? labels.verifyButton : labels.verifyTwoFAButton
+                    }
+                  ),
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                    "button",
+                    {
+                      id: "auth-back-btn",
+                      type: "button",
+                      onClick: () => {
+                        setStep("email");
+                        setError(null);
+                        setDigits(Array(CODE_LENGTH).fill(""));
+                      },
+                      className: "w-full py-2 rounded-lg text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors",
+                      children: labels.backButton
+                    }
+                  )
+                ]
+              }
+            )
           ]
         }
       )

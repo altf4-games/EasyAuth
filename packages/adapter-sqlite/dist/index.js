@@ -96,12 +96,16 @@ function sqliteAdapter(dbPath) {
   runMigrations(db);
   return {
     async getUserByOAuth(provider, providerAccountId) {
-      const row = db.prepare("SELECT email FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?").get(provider, providerAccountId);
+      const row = db.prepare(
+        "SELECT email FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?"
+      ).get(provider, providerAccountId);
       if (!row) return null;
       return this.getUser(row.email);
     },
     async linkOAuthAccount(email, provider, providerAccountId) {
-      db.prepare("INSERT INTO oauth_accounts (provider, provider_account_id, email) VALUES (?, ?, ?) ON CONFLICT DO NOTHING").run(provider, providerAccountId, email);
+      db.prepare(
+        "INSERT INTO oauth_accounts (provider, provider_account_id, email) VALUES (?, ?, ?) ON CONFLICT DO NOTHING"
+      ).run(provider, providerAccountId, email);
     },
     async getUser(email) {
       const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
@@ -118,7 +122,10 @@ function sqliteAdapter(dbPath) {
       const existing = db.prepare("SELECT created_at FROM users WHERE email = ?").get(email);
       const now = Date.now();
       if (existing) {
-        db.prepare("UPDATE users SET last_login_at = ? WHERE email = ?").run(now, email);
+        db.prepare("UPDATE users SET last_login_at = ? WHERE email = ?").run(
+          now,
+          email
+        );
       } else {
         db.prepare(
           "INSERT INTO users (email, created_at, last_login_at, totp_enabled, metadata) VALUES (?, ?, ?, 0, ?)"
@@ -155,7 +162,9 @@ function sqliteAdapter(dbPath) {
       ).run(email, untilTimestamp);
     },
     async getLockout(email) {
-      const row = db.prepare("SELECT locked_until FROM lockouts WHERE email = ? AND locked_until > ?").get(email, Date.now());
+      const row = db.prepare(
+        "SELECT locked_until FROM lockouts WHERE email = ? AND locked_until > ?"
+      ).get(email, Date.now());
       return row?.locked_until ?? null;
     },
     async setTOTPSecret(email, encryptedSecret) {

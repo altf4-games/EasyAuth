@@ -25,10 +25,7 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 var import_mongodb = require("mongodb");
 async function ensureIndexes(db) {
-  await db.collection("otp_state").createIndex(
-    { expiresAt: 1 },
-    { expireAfterSeconds: 0, background: true }
-  );
+  await db.collection("otp_state").createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0, background: true });
   await db.collection("lockouts").createIndex(
     { lockedUntil: 1 },
     { expireAfterSeconds: 0, background: true }
@@ -37,7 +34,10 @@ async function ensureIndexes(db) {
   await db.collection("lockouts").createIndex({ email: 1 }, { unique: true, background: true });
   await db.collection("totp_secrets").createIndex({ email: 1 }, { unique: true, background: true });
   await db.collection("backup_codes").createIndex({ email: 1, hashedCode: 1 }, { background: true });
-  await db.collection("oauth_accounts").createIndex({ provider: 1, providerAccountId: 1 }, { unique: true, background: true });
+  await db.collection("oauth_accounts").createIndex(
+    { provider: 1, providerAccountId: 1 },
+    { unique: true, background: true }
+  );
 }
 function mongoAdapter(options) {
   const client = new import_mongodb.MongoClient(options.uri);
@@ -142,7 +142,10 @@ function mongoAdapter(options) {
     },
     async getLockout(email) {
       const lockouts = await col("lockouts");
-      const doc = await lockouts.findOne({ email, lockedUntil: { $gt: /* @__PURE__ */ new Date() } });
+      const doc = await lockouts.findOne({
+        email,
+        lockedUntil: { $gt: /* @__PURE__ */ new Date() }
+      });
       return doc ? doc.lockedUntil.getTime() : null;
     },
     async setTOTPSecret(email, encryptedSecret) {
