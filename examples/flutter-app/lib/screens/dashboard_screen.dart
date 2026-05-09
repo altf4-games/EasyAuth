@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 import 'home_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final String userEmail;
-  const DashboardScreen({super.key, required this.userEmail});
+  const DashboardScreen({super.key});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -14,7 +14,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final _storage = const FlutterSecureStorage();
-  String _protectedData = 'Loading...';
+  String _userEmail = 'Loading profile...';
+  String _protectedData = '';
 
   @override
   void initState() {
@@ -24,7 +25,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _fetchProtectedData() async {
     final token = await _storage.read(key: 'jwt_token');
-    
+
     if (token == null) {
       if (mounted) _logOut();
       return;
@@ -32,25 +33,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/api/user'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse('${AppConfig.apiBaseUrl}/user'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          _protectedData = "User validated from server!\nEmail matches: ${data['user']['email']}";
+          _userEmail = data['user']['email'] ?? 'Unknown User';
+          _protectedData = "User token successfully validated by the server!";
         });
       } else {
         setState(() {
+          _userEmail = "Unauthorized";
           _protectedData = "Error: Invalid token / Server rejected us";
         });
       }
     } catch (e) {
       setState(() {
-        _protectedData = "Failed to fetch: $e";
+        _userEmail = "Offline";
+        _protectedData = "Failed to fetch from ${AppConfig.apiBaseUrl}: $e";
       });
     }
   }
@@ -58,9 +60,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _logOut() async {
     await _storage.delete(key: 'jwt_token');
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     }
   }
 
@@ -73,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _logOut(),
-          )
+          ),
         ],
       ),
       body: Center(
@@ -82,7 +84,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Hello, ${widget.userEmail}', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'Hello, $_userEmail',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 32),
               Card(
                 color: Colors.green.shade50,

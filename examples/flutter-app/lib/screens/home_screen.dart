@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:easy_auth_flutter/easy_auth_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:app_links/app_links.dart';
+import '../config.dart';
 import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,36 +14,59 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _storage = const FlutterSecureStorage();
-  final _appLinks = AppLinks();
+  late AppLinks _appLinks;
 
   @override
   void initState() {
     super.initState();
-    _handleIncomingLinks();
+    _checkExistingToken();
+    _initDeepLinks();
   }
 
-  void _handleIncomingLinks() {
-    _appLinks.uriLinkStream.listen((uri) async {
-      final token = uri.queryParameters['token'];
-      if (token != null && mounted) {
-        // Assume user email is retrieved via a /me endpoint later, or passed in state
-        await _storage.write(key: 'jwt_token', value: token);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => DashboardScreen(userEmail: 'Google User'),
-          ),
-        );
+  Future<void> _checkExistingToken() async {
+    final token = await _storage.read(key: 'jwt_token');
+    if (token != null && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const DashboardScreen(),
+        ),
+      );
+    }
+  }
+
+  void _initDeepLinks() async {
+    _appLinks = AppLinks();
+    
+    final initialLink = await _appLinks.getInitialLink();
+    if (initialLink != null) {
+      _processToken(initialLink);
+    }
+
+    _appLinks.uriLinkStream.listen((Uri? uri) {
+      if (uri != null) {
+        _processToken(uri);
       }
+    }, onError: (err) {
+      debugPrint('Deep link error: \');
     });
+  }
+
+  void _processToken(Uri uri) async {
+    final token = uri.queryParameters['token'];
+    if (token != null && mounted) {
+      await _storage.write(key: 'jwt_token', value: token);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const DashboardScreen(),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('EasyAuth Demo'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+      appBar: AppBar(title: const Text('EasyAuth Demo')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -54,11 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
-                // Determine API base URL dynamically or hardcode for dev:
-                // Note: on Android emulator, 10.0.2.2 usually maps to localhost.
-                final baseStr = 'http://10.0.2.2:3000/api/auth/';
-                // We use fluent-auth:// scheme that we will define for the deep link return
-                final uri = Uri.parse('$baseStr?returnTo=easyauth://callback');
+                final baseStr = "\/auth"; 
 
                 final result = await EasyAuthModal.show(
                   context,
@@ -66,14 +86,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
 
                 if (result != null && context.mounted) {
-                  // Successful login! Save the token securely.
                   await _storage.write(key: 'jwt_token', value: result.token);
 
-                  // Navigate to protected page
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (_) =>
-                          DashboardScreen(userEmail: result.user.email),
+                      builder: (_) => const DashboardScreen(),
                     ),
                   );
                 } else {
