@@ -78,11 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
-                final baseStr = "\/auth"; 
+                final baseStr = '${AppConfig.apiBaseUrl}/auth'; 
 
                 final result = await EasyAuthModal.show(
                   context,
                   apiBaseUrl: Uri.parse(baseStr),
+                  // Customizable deep link scheme:
+                  deepLinkScheme: 'easyauth://callback',
                 );
 
                 if (result != null && context.mounted) {

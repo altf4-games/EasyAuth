@@ -13,6 +13,7 @@ class EasyAuthModal extends StatefulWidget {
   final Map<String, String>? errorMessages;
   final http.Client? client;
   final bool enableGoogleOAuth;
+  final String deepLinkScheme;
 
   const EasyAuthModal({
     super.key,
@@ -21,6 +22,7 @@ class EasyAuthModal extends StatefulWidget {
     this.errorMessages,
     this.client,
     this.enableGoogleOAuth = true,
+    this.deepLinkScheme = 'easyauth://callback',
   });
 
   /// Displays the authentication modal as a bottom sheet.
@@ -33,6 +35,7 @@ class EasyAuthModal extends StatefulWidget {
     bool isScrollControlled = true,
     http.Client? client,
     bool enableGoogleOAuth = true,
+    String deepLinkScheme = 'easyauth://callback',
   }) {
     return showModalBottomSheet<EasyAuthResult>(
       context: context,
@@ -50,6 +53,7 @@ class EasyAuthModal extends StatefulWidget {
           errorMessages: errorMessages,
           client: client,
           enableGoogleOAuth: enableGoogleOAuth,
+          deepLinkScheme: deepLinkScheme,
         ),
       ),
     );
@@ -320,7 +324,7 @@ class _EasyAuthModalState extends State<EasyAuthModal> {
                       .toString()
                       .replaceAll(RegExp(r'/$'), '');
                   final url = Uri.parse(
-                      '$baseUrlStr/google?returnTo=easyauth://callback');
+                      '$baseUrlStr/google?returnTo=${Uri.encodeComponent(widget.deepLinkScheme)}');
                   try {
                     await launchUrl(url, mode: LaunchMode.externalApplication);
                     if (mounted) {
