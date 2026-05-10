@@ -27,28 +27,29 @@ class _HomeScreenState extends State<HomeScreen> {
     final token = await _storage.read(key: 'jwt_token');
     if (token != null && mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const DashboardScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     }
   }
 
   void _initDeepLinks() async {
     _appLinks = AppLinks();
-    
+
     final initialLink = await _appLinks.getInitialLink();
     if (initialLink != null) {
       _processToken(initialLink);
     }
 
-    _appLinks.uriLinkStream.listen((Uri? uri) {
-      if (uri != null) {
-        _processToken(uri);
-      }
-    }, onError: (err) {
-      debugPrint('Deep link error: \');
-    });
+    _appLinks.uriLinkStream.listen(
+      (Uri? uri) {
+        if (uri != null) {
+          _processToken(uri);
+        }
+      },
+      onError: (err) {
+        debugPrint('Deep link error: $err');
+      },
+    );
   }
 
   void _processToken(Uri uri) async {
@@ -56,9 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (token != null && mounted) {
       await _storage.write(key: 'jwt_token', value: token);
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const DashboardScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
     }
   }
@@ -78,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
-                final baseStr = '${AppConfig.apiBaseUrl}/auth'; 
+                final baseStr = '${AppConfig.apiBaseUrl}/auth';
 
                 final result = await EasyAuthModal.show(
                   context,
@@ -91,9 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   await _storage.write(key: 'jwt_token', value: result.token);
 
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const DashboardScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const DashboardScreen()),
                   );
                 } else {
                   debugPrint('Modal dismissed without auth');
